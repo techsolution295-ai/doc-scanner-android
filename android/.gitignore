@@ -12,3 +12,7 @@ GeneratedPluginRegistrant.java
 key.properties
 **/*.keystore
 **/*.jks
+
+# This app's upload key is tracked so the Play signing key is not lost.
+!key.properties
+!app/upload-keystore.jks
