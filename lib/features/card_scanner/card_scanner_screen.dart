@@ -10,7 +10,6 @@ import '../../shared/models/scan_session.dart';
 import '../../shared/models/scan_types.dart';
 import '../../shared/services/document_scanner_service.dart';
 import '../../shared/services/image_processing_service.dart';
-import '../../shared/services/permission_service.dart';
 import '../../shared/widgets/app_button.dart';
 import '../../shared/widgets/app_loader.dart';
 
@@ -61,8 +60,6 @@ class _CardScannerScreenState extends State<CardScannerScreen> {
         return;
       }
     } else {
-      final granted = await PermissionService.instance.requestPhotosPermission();
-      if (!granted) return;
       final image = await _picker.pickImage(source: ImageSource.gallery, imageQuality: 95);
       if (image == null) return;
       if (!mounted) return;

@@ -15,7 +15,6 @@ import '../../shared/models/scan_session.dart';
 import '../../shared/models/scan_types.dart';
 import '../../shared/providers/document_provider.dart';
 import '../../shared/services/pdf_service.dart';
-import '../../shared/services/permission_service.dart';
 import '../../shared/widgets/app_button.dart';
 import '../../shared/widgets/app_loader.dart';
 import '../../shared/widgets/empty_state_widget.dart';
@@ -74,9 +73,6 @@ class _ImageToPdfScreenState extends State<ImageToPdfScreen> {
     if (_isPicking || _busy) return;
     _isPicking = true;
     try {
-      final granted = await PermissionService.instance.requestPhotosPermission();
-      if (!granted) return;
-
       final picked = await _picker.pickMultiImage(imageQuality: 90);
       if (picked.isEmpty) return;
 

@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
-import '../../shared/services/permission_service.dart';
 import '../../shared/widgets/app_loader.dart';
 import 'image_to_pdf_screen.dart';
 
@@ -19,9 +18,6 @@ class ImageToPdfFlow {
     final navigator = Navigator.of(context);
     final messenger = ScaffoldMessenger.of(context);
     try {
-      final granted = await PermissionService.instance.requestPhotosPermission();
-      if (!granted) return;
-
       final picked = await ImagePicker().pickMultiImage(imageQuality: 90);
       if (picked.isEmpty) return;
 

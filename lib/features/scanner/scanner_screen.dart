@@ -161,9 +161,6 @@ class _ScannerScreenState extends State<ScannerScreen>
   }
 
   Future<void> _pickFromGallery() async {
-    final granted = await PermissionService.instance.requestPhotosPermission();
-    if (!granted) return;
-
     if (_isBatchMode) {
       final images = await _imagePicker.pickMultiImage(imageQuality: 90);
       if (images.isEmpty) return;

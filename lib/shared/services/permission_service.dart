@@ -9,18 +9,8 @@ class PermissionService {
     return status.isGranted;
   }
 
-  Future<bool> requestPhotosPermission() async {
-    if (await Permission.photos.request().isGranted) return true;
-    return Permission.storage.request().isGranted;
-  }
-
   Future<bool> hasCameraPermission() async {
     return Permission.camera.isGranted;
-  }
-
-  Future<bool> hasPhotosPermission() async {
-    if (await Permission.photos.isGranted) return true;
-    return Permission.storage.isGranted;
   }
 
   Future<void> openSettings() => openAppSettings();
