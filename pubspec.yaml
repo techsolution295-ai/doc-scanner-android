@@ -1,7 +1,7 @@
 name: doc_scanner
 description: Smart Doc Scanner Pro - Advanced document, card, and image to PDF scanner.
 publish_to: 'none'
-version: 1.0.0+2
+version: 1.0.0+3
 
 environment:
   sdk: ^3.11.5
