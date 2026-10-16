@@ -5,6 +5,7 @@ import 'package:printing/printing.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../../shared/widgets/app_loader.dart';
+import '../../shared/widgets/banner_ad_widget.dart';
 import '../home/home_constants.dart';
 
 class PdfViewerArgs {
@@ -70,7 +71,8 @@ class PdfViewerScreen extends StatelessWidget {
           ),
         ],
       ),
-      body: file.existsSync()
+      body: TopBannerBody(
+        child: file.existsSync()
           ? PdfPreview(
               build: (format) => file.readAsBytes(),
               canChangePageFormat: false,
@@ -85,6 +87,7 @@ class PdfViewerScreen extends StatelessWidget {
           : const Center(
               child: Text('File not found.'),
             ),
+      ),
     );
   }
 }

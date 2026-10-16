@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../app/constants/app_constants.dart';
+import '../../shared/providers/settings_provider.dart';
+import '../../shared/services/pro_purchase_service.dart';
 import '../home/home_constants.dart';
 import 'widgets/settings_header.dart';
-import 'widgets/settings_hero_card.dart';
 import 'widgets/settings_menu_tile.dart';
+import 'widgets/settings_pro_card.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key, this.embedded = false});
@@ -16,18 +19,34 @@ class SettingsScreen extends StatelessWidget {
     final uri = Uri.parse(url);
     if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Could not open link.')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Could not open link.')));
       }
     }
+  }
+
+  Future<void> _restore(BuildContext context) async {
+    await context.read<ProPurchaseService>().restore();
+    if (!context.mounted) return;
+    final isPremium = context.read<SettingsProvider>().isPremium;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          isPremium
+              ? 'Pro access restored.'
+              : 'No active subscription was found.',
+        ),
+      ),
+    );
   }
 
   Future<void> _openSupport(BuildContext context) async {
     final uri = Uri(
       scheme: 'mailto',
       path: AppConstants.supportEmail,
-      query: 'subject=${Uri.encodeComponent('${AppConstants.appName} Support')}',
+      query:
+          'subject=${Uri.encodeComponent('${AppConstants.appName} Support')}',
     );
     if (!await launchUrl(uri)) {
       if (context.mounted) {
@@ -51,16 +70,23 @@ class SettingsScreen extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               SettingsHeader(showBack: !embedded),
-              const SettingsHeroCard(),
+              if (!context.watch<SettingsProvider>().isPremium)
+                const SettingsProCard(),
               const SizedBox(height: 20),
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: HomeConstants.screenPadding),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: HomeConstants.screenPadding,
+                ),
                 child: Container(
                   decoration: BoxDecoration(
                     color: Colors.white,
-                    borderRadius: BorderRadius.circular(HomeConstants.cardRadius),
+                    borderRadius: BorderRadius.circular(
+                      HomeConstants.cardRadius,
+                    ),
                     border: Border.all(color: const Color(0xFFEEF2F7)),
-                    boxShadow: [HomeConstants.softShadow(blur: 12, y: 4, opacity: 0.05)],
+                    boxShadow: [
+                      HomeConstants.softShadow(blur: 12, y: 4, opacity: 0.05),
+                    ],
                   ),
                   child: Column(
                     children: [
@@ -71,7 +97,8 @@ class SettingsScreen extends StatelessWidget {
                         title: 'Privacy Policy',
                         subtitle: 'How we protect your data',
                         animationIndex: 0,
-                        onTap: () => _openUrl(context, AppConstants.privacyPolicyUrl),
+                        onTap: () =>
+                            _openUrl(context, AppConstants.privacyPolicyUrl),
                       ),
                       SettingsMenuTile(
                         icon: Icons.description_outlined,
@@ -92,14 +119,14 @@ class SettingsScreen extends StatelessWidget {
                         onTap: () => _openSupport(context),
                       ),
                       SettingsMenuTile(
-                        icon: Icons.apps_rounded,
-                        iconColor: const Color(0xFFF59E0B),
-                        iconBg: const Color(0xFFFFFBEB),
-                        title: 'More Apps',
-                        subtitle: 'Discover our other apps',
+                        icon: Icons.restore_rounded,
+                        iconColor: const Color(0xFF3B66FF),
+                        iconBg: const Color(0xFFEEF2FF),
+                        title: 'Restore Purchases',
+                        subtitle: 'Restore your Pro subscription',
                         showDivider: false,
                         animationIndex: 3,
-                        onTap: () => _openUrl(context, AppConstants.moreAppsUrl),
+                        onTap: () => _restore(context),
                       ),
                     ],
                   ),

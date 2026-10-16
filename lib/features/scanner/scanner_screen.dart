@@ -291,9 +291,7 @@ class _ScannerScreenState extends State<ScannerScreen>
           if (_isInitialized && _cameraController != null)
             CameraPreview(_cameraController!)
           else
-            const Center(
-              child: CircularProgressIndicator(color: Colors.white),
-            ),
+            const Center(child: AppSpinner(size: 42, color: Colors.white)),
           // Dark overlay with transparent scan window
           Container(
             decoration: BoxDecoration(
@@ -341,7 +339,7 @@ class _ScannerScreenState extends State<ScannerScreen>
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  CircularProgressIndicator(color: Colors.white),
+                  AppSpinner(size: 42, color: Colors.white),
                   SizedBox(height: 12),
                   Text('Capturing...', style: TextStyle(color: Colors.white, fontSize: 16)),
                 ],
@@ -382,8 +380,8 @@ class _ScannerScreenState extends State<ScannerScreen>
                               ),
                               child: _isCapturing
                                   ? const Padding(
-                                      padding: EdgeInsets.all(20),
-                                      child: CircularProgressIndicator(strokeWidth: 2),
+                                      padding: EdgeInsets.all(18),
+                                      child: AppSpinner(size: 28, color: Color(0xFF3B66FF)),
                                     )
                                   : null,
                             ),

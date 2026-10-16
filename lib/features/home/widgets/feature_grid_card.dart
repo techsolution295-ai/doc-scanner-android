@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../shared/widgets/app_animations.dart';
+import '../../../shared/widgets/fitted_card_icon.dart';
 import '../home_constants.dart';
 
 class FeatureGridCard extends StatelessWidget {
@@ -14,6 +15,8 @@ class FeatureGridCard extends StatelessWidget {
   });
 
   final String title;
+  // Kept so the subtitle label can be restored.
+  // ignore: unused_field
   final String subtitle;
   final String iconAsset;
   final VoidCallback onTap;
@@ -36,62 +39,60 @@ class FeatureGridCard extends StatelessWidget {
             boxShadow: [HomeConstants.softShadow(blur: 14, y: 5, opacity: 0.05)],
           ),
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(4, 4, 4, 4),
+            padding: const EdgeInsets.fromLTRB(8, 10, 8, 10),
             child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Flexible(
-                  flex: 5,
-                  child: Center(
-                    child: Image.asset(
-                      iconAsset,
-                      fit: BoxFit.contain,
-                    ),
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 4),
+                    child: FittedCardIcon(asset: iconAsset),
                   ),
                 ),
-                const SizedBox(height: 2),
-                Flexible(
-                  flex: 2,
-                  child: Center(
-                    child: FittedBox(
-                      fit: BoxFit.scaleDown,
-                      child: Text(
-                        title,
-                        maxLines: 1,
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w700,
-                          color: HomeConstants.navyText,
-                          height: 1.0,
-                        ),
-                      ),
-                    ),
+                const SizedBox(height: 8),
+                _FitLabel(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: HomeConstants.navyText,
+                    height: 1.1,
                   ),
                 ),
-                Flexible(
-                  flex: 2,
-                  child: Center(
-                    child: FittedBox(
-                      fit: BoxFit.scaleDown,
-                      child: Text(
-                        subtitle,
-                        maxLines: 1,
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(
-                          fontSize: 10,
-                          color: HomeConstants.greySubtitle,
-                          height: 1.0,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
+                // _FitLabel(
+                //   subtitle,
+                //   style: const TextStyle(
+                //     fontSize: 10,
+                //     color: HomeConstants.greySubtitle,
+                //     height: 1,
+                //   ),
+                // ),
               ],
             ),
           ),
         ),
       ),
     ).fadeScaleIn(delayMs: 280, index: animationIndex);
+  }
+}
+
+class _FitLabel extends StatelessWidget {
+  const _FitLabel(this.text, {required this.style});
+
+  final String text;
+  final TextStyle style;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: FittedBox(
+        fit: BoxFit.scaleDown,
+        child: Text(
+          text,
+          softWrap: false,
+          textAlign: TextAlign.center,
+          style: style,
+        ),
+      ),
+    );
   }
 }

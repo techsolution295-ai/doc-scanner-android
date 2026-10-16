@@ -8,6 +8,7 @@ import '../../app/routes/route_names.dart';
 import '../../shared/providers/document_provider.dart';
 import '../../shared/services/pdf_tools_service.dart';
 import '../../shared/widgets/app_loader.dart';
+import '../../shared/widgets/banner_ad_widget.dart';
 import '../home/home_constants.dart';
 import '../pdf_viewer/pdf_viewer_screen.dart';
 
@@ -176,7 +177,8 @@ class _PdfRedactScreenState extends State<PdfRedactScreen> {
           IconButton(tooltip: 'Clear page', onPressed: _loading ? null : _clearPage, icon: const Icon(Icons.layers_clear_rounded)),
         ],
       ),
-      body: _loading
+      body: TopBannerBody(
+        child: _loading
           ? const AppLoadingView(message: 'Loading pages…')
           : Column(
               children: [
@@ -230,6 +232,7 @@ class _PdfRedactScreenState extends State<PdfRedactScreen> {
                 _buildBottomBar(),
               ],
             ),
+      ),
     );
   }
 
@@ -266,11 +269,7 @@ class _PdfRedactScreenState extends State<PdfRedactScreen> {
         child: ElevatedButton.icon(
           onPressed: _busy ? null : _save,
           icon: _busy
-              ? const SizedBox(
-                  width: 18,
-                  height: 18,
-                  child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                )
+              ? const AppSpinner(size: 22, color: Colors.white)
               : const Icon(Icons.save_alt_rounded),
           style: ElevatedButton.styleFrom(
             backgroundColor: HomeConstants.linkBlue,

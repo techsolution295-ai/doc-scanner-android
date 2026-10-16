@@ -1,16 +1,14 @@
-import 'dart:math' as math;
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_animate/flutter_animate.dart';
+import 'package:loading_animation_widget/loading_animation_widget.dart';
 import 'package:provider/provider.dart';
 
 import '../../app/constants/app_assets.dart';
+import '../../app/constants/app_constants.dart';
 import '../../app/routes/route_names.dart';
 import '../../shared/providers/document_provider.dart';
-import 'splash_constants.dart';
-import 'widgets/splash_animated_background.dart';
-import 'widgets/splash_brand_logo.dart';
+import '../../shared/providers/settings_provider.dart';
+import '../../shared/services/app_open_ad_service.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -19,11 +17,13 @@ class SplashScreen extends StatefulWidget {
   State<SplashScreen> createState() => _SplashScreenState();
 }
 
-class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMixin {
-  late final AnimationController _masterController;
-  late final Animation<double> _scanAnimation;
-  late final Animation<double> _pulseAnimation;
-  late final Animation<double> _progressAnimation;
+class _SplashScreenState extends State<SplashScreen> {
+  static const Color _background = Color(0xFFF7FAFF);
+
+  static const Duration _maxSplashBudget = Duration(seconds: 8);
+  static const Duration _minBeforeAd = Duration(seconds: 3);
+  static const Duration _minWhenNoAd = Duration(seconds: 5);
+  static const Duration _postAdSplash = Duration(seconds: 2);
 
   @override
   void initState() {
@@ -31,50 +31,61 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
     SystemChrome.setSystemUIOverlayStyle(
       const SystemUiOverlayStyle(
         statusBarColor: Colors.transparent,
-        statusBarIconBrightness: Brightness.light,
-        systemNavigationBarColor: Color(0xFF0B1F4A),
-        systemNavigationBarIconBrightness: Brightness.light,
+        statusBarIconBrightness: Brightness.dark,
+        systemNavigationBarColor: _background,
+        systemNavigationBarIconBrightness: Brightness.dark,
       ),
     );
-
-    _masterController = AnimationController(
-      vsync: this,
-      duration: SplashConstants.splashDuration,
-    );
-
-    _scanAnimation = CurvedAnimation(
-      parent: _masterController,
-      curve: const Interval(0.0, 0.85, curve: Curves.easeInOut),
-    );
-    _pulseAnimation = CurvedAnimation(
-      parent: _masterController,
-      curve: Curves.easeInOut,
-    );
-    _progressAnimation = CurvedAnimation(
-      parent: _masterController,
-      curve: Curves.easeOutCubic,
-    );
-
-    _masterController.forward();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) _navigateNext();
     });
   }
 
+  Duration _remainingBudget(Stopwatch stopwatch) {
+    final remaining = _maxSplashBudget - stopwatch.elapsed;
+    return remaining > Duration.zero ? remaining : Duration.zero;
+  }
+
   Future<void> _navigateNext() async {
-    // Run splash timing and warm up home data in parallel.
+    final stopwatch = Stopwatch()..start();
     final docsFuture = context.read<DocumentProvider>().ensureLoaded();
-    await Future.wait<void>([
-      Future<void>.delayed(SplashConstants.splashDuration),
-      docsFuture,
-    ]);
+
+    await Future<void>.delayed(_minBeforeAd);
     if (!mounted) return;
 
-    // Warm home banner so the first home frame is not blank.
+    final remainingForAd = _remainingBudget(stopwatch);
+    final adShown = remainingForAd > Duration.zero
+        ? await AppOpenAdManager.instance.showAdIfAvailable(
+            loadTimeout: remainingForAd,
+          )
+        : false;
+    if (!mounted) return;
+
+    if (adShown) {
+      final budget = _remainingBudget(stopwatch);
+      final postAdWait = _postAdSplash < budget ? _postAdSplash : budget;
+      if (postAdWait > Duration.zero) {
+        await Future<void>.delayed(postAdWait);
+      }
+    } else {
+      final noAdTarget = _minWhenNoAd - stopwatch.elapsed;
+      if (noAdTarget > Duration.zero) {
+        final budget = _remainingBudget(stopwatch);
+        final waitForNoAd = noAdTarget < budget ? noAdTarget : budget;
+        if (waitForNoAd > Duration.zero) {
+          await Future<void>.delayed(waitForNoAd);
+        }
+      }
+    }
+    if (!mounted) return;
+
+    await docsFuture;
+    if (!mounted) return;
+
     try {
       await precacheImage(const AssetImage(AppAssets.homeBanner), context);
     } catch (_) {
-      // Ignore asset warm-up failures; home still opens.
+      // Home still opens if the banner cannot be warmed up.
     }
     if (!mounted) return;
 
@@ -87,45 +98,107 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
       ),
     );
 
-    Navigator.of(context).pushReplacementNamed(RouteNames.home);
-  }
-
-  @override
-  void dispose() {
-    _masterController.dispose();
-    super.dispose();
+    final isPremium = context.read<SettingsProvider>().isPremium;
+    Navigator.of(context).pushReplacementNamed(
+      isPremium ? RouteNames.home : RouteNames.premium,
+      arguments: isPremium ? null : true,
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: _masterController,
-      builder: (context, _) {
-        final pulse = (math.sin(_pulseAnimation.value * math.pi * 4) + 1) / 2;
-
-        return Scaffold(
-          body: Stack(
-            fit: StackFit.expand,
+    return const Scaffold(
+      backgroundColor: _background,
+      body: SafeArea(
+        child: SizedBox.expand(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              SplashAnimatedBackground(scanProgress: _scanAnimation.value),
-              const SplashFloatingParticles(),
-              SafeArea(
-                child: Column(
-                  children: [
-                    const Spacer(flex: 2),
-                    SplashBrandLogo(pulse: pulse),
-                    const Spacer(flex: 2),
-                    SplashProgressBar(progress: _progressAnimation.value)
-                        .animate()
-                        .fadeIn(delay: 800.ms),
-                    const SizedBox(height: 36),
-                  ],
+              Spacer(),
+              _SplashMark(),
+              SizedBox(height: 22),
+              SizedBox(
+                width: double.infinity,
+                child: Text(
+                  AppConstants.appName,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 28,
+                    fontWeight: FontWeight.w800,
+                    color: Color(0xFF0F172A),
+                    letterSpacing: -0.3,
+                    height: 1.1,
+                  ),
                 ),
               ),
+              SizedBox(height: 8),
+              SizedBox(
+                width: double.infinity,
+                child: Text(
+                  'Scan documents into clean PDFs',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w500,
+                    color: Color(0xFF64748B),
+                    height: 1.3,
+                  ),
+                ),
+              ),
+              Spacer(),
+              Center(child: _SplashLoader()),
+              SizedBox(height: 36),
             ],
           ),
-        );
-      },
+        ),
+      ),
+    );
+  }
+}
+
+class _SplashMark extends StatelessWidget {
+  const _SplashMark();
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Container(
+        width: 120,
+        height: 120,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(28),
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0xFF3B66FF).withValues(alpha: 0.22),
+              blurRadius: 28,
+              offset: const Offset(0, 12),
+            ),
+          ],
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(28),
+          child: Image.asset(
+            AppAssets.appIcon,
+            width: 120,
+            height: 120,
+            fit: BoxFit.cover,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _SplashLoader extends StatelessWidget {
+  const _SplashLoader();
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: LoadingAnimationWidget.staggeredDotsWave(
+        color: const Color(0xFF3B66FF),
+        size: 40,
+      ),
     );
   }
 }

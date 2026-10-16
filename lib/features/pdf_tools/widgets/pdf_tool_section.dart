@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../shared/widgets/app_animations.dart';
+import '../../../shared/widgets/fitted_card_icon.dart';
 
 class PdfToolCard extends StatelessWidget {
   const PdfToolCard({
@@ -13,6 +14,8 @@ class PdfToolCard extends StatelessWidget {
   });
 
   final String title;
+  // Kept so the subtitle label can be restored.
+  // ignore: unused_field
   final String subtitle;
   final String iconAsset;
   final VoidCallback? onTap;
@@ -40,58 +43,61 @@ class PdfToolCard extends StatelessWidget {
             ],
           ),
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(6, 6, 6, 6),
+            padding: const EdgeInsets.fromLTRB(8, 10, 8, 10),
             child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Flexible(
-                  flex: 5,
-                  child: Center(
-                    child: Image.asset(iconAsset, fit: BoxFit.contain),
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 4),
+                    child: FittedCardIcon(asset: iconAsset),
                   ),
                 ),
-                const SizedBox(height: 2),
-                Flexible(
-                  flex: 2,
-                  child: Center(
-                    child: FittedBox(
-                      fit: BoxFit.scaleDown,
-                      child: Text(
-                        title,
-                        textAlign: TextAlign.center,
-                        maxLines: 1,
-                        style: const TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w700,
-                          color: Color(0xFF0F172A),
-                          height: 1.0,
-                        ),
-                      ),
-                    ),
+                const SizedBox(height: 8),
+                _FitLabel(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFF0F172A),
+                    height: 1.1,
                   ),
                 ),
-                Flexible(
-                  flex: 3,
-                  child: Center(
-                    child: Text(
-                      subtitle,
-                      textAlign: TextAlign.center,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        fontSize: 9.5,
-                        color: Color(0xFF64748B),
-                        height: 1.1,
-                      ),
-                    ),
-                  ),
-                ),
+                // _FitLabel(
+                //   subtitle,
+                //   style: const TextStyle(
+                //     fontSize: 10,
+                //     color: Color(0xFF64748B),
+                //     height: 1,
+                //   ),
+                // ),
               ],
             ),
           ),
         ),
       ),
     ).fadeScaleIn(delayMs: 180, index: animationIndex);
+  }
+}
+
+class _FitLabel extends StatelessWidget {
+  const _FitLabel(this.text, {required this.style});
+
+  final String text;
+  final TextStyle style;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: FittedBox(
+        fit: BoxFit.scaleDown,
+        child: Text(
+          text,
+          softWrap: false,
+          textAlign: TextAlign.center,
+          style: style,
+        ),
+      ),
+    );
   }
 }
 
@@ -167,9 +173,9 @@ class PdfToolSection extends StatelessWidget {
             physics: const NeverScrollableScrollPhysics(),
             gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
               crossAxisCount: 3,
-              mainAxisSpacing: 10,
-              crossAxisSpacing: 10,
-              childAspectRatio: 0.84,
+              mainAxisSpacing: 8,
+              crossAxisSpacing: 6,
+              childAspectRatio: 0.92,
             ),
             itemCount: tools.length,
             itemBuilder: (_, i) {

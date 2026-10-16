@@ -8,6 +8,7 @@ import '../../shared/models/scan_types.dart';
 import '../../shared/providers/document_provider.dart';
 import '../../shared/services/pdf_tools_service.dart';
 import '../../shared/widgets/app_loader.dart';
+import '../../shared/widgets/banner_ad_widget.dart';
 import '../home/home_constants.dart';
 import '../pdf_viewer/pdf_viewer_screen.dart';
 
@@ -90,7 +91,8 @@ class _PdfCompressScreenState extends State<PdfCompressScreen> {
           style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: HomeConstants.navyText),
         ),
       ),
-      body: ListView(
+      body: TopBannerBody(
+        child: ListView(
         padding: const EdgeInsets.all(20),
         children: [
           Container(
@@ -156,19 +158,15 @@ class _PdfCompressScreenState extends State<PdfCompressScreen> {
           ),
         ],
       ),
-      bottomNavigationBar: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
+      ),
+      bottomNavigationBar: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 8, 20, 12),
           child: SizedBox(
             height: 52,
             child: ElevatedButton.icon(
               onPressed: _busy ? null : _compressAndSave,
               icon: _busy
-                  ? const SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                    )
+                  ? const AppSpinner(size: 22, color: Colors.white)
                   : const Icon(Icons.compress_rounded),
               style: ElevatedButton.styleFrom(
                 backgroundColor: HomeConstants.linkBlue,
@@ -179,7 +177,6 @@ class _PdfCompressScreenState extends State<PdfCompressScreen> {
                   style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
             ),
           ),
-        ),
       ),
     );
   }

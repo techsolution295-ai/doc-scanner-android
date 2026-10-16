@@ -4,9 +4,10 @@ class AppConstants {
   static const String appName = 'Doc Scanner';
   static const String appVersion = '1.0.0';
 
-  static const String privacyPolicyUrl = 'https://example.com/privacy-policy';
-  static const String termsUrl = 'https://example.com/terms-and-conditions';
-  static const String supportEmail = 'support@smartdocscanner.com';
+  static const String privacyPolicyUrl =
+      'https://sites.google.com/view/app-bounties/home';
+  static const String termsUrl = 'https://sites.google.com/view/appbounties/home';
+  static const String supportEmail = 'appbounties@gmail.com';
   static const String moreAppsUrl = 'https://play.google.com/store/apps';
 
   static const String prefsOnboardingDone = 'onboarding_done';
@@ -29,9 +30,10 @@ class AppConstants {
   // TODO: Integrate Firebase Storage or Google Drive API for cloud backup.
   static const bool cloudBackupEnabled = false;
 
-  // TODO: Integrate in_app_purchase for premium subscriptions.
-  static const bool paymentsEnabled = false;
+  static const bool paymentsEnabled = true;
+  static const bool adsEnabled = true;
 
-  // TODO: Integrate google_mobile_ads for ad monetization.
-  static const bool adsEnabled = false;
+  static const String weeklyProductId = 'weekly_premium';
+  static const String monthlyProductId = 'app_premium';
+  static const String yearlyProductId = 'yearly_premium';
 }

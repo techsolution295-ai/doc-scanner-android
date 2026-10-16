@@ -17,31 +17,38 @@ class ImageToPdfFlow {
     _picking = true;
     final navigator = Navigator.of(context);
     final messenger = ScaffoldMessenger.of(context);
+    var loaderShown = false;
     try {
       final picked = await ImagePicker().pickMultiImage(imageQuality: 90);
-      if (picked.isEmpty) return;
+      if (picked.isEmpty || !context.mounted) return;
 
-      if (!context.mounted) return;
       AppLoader.show(context, message: 'Loading images…');
+      loaderShown = true;
 
       final images = <InitialImage>[];
-      for (final f in picked) {
-        images.add(InitialImage(await f.readAsBytes(), f.name));
+      for (final file in picked) {
+        images.add(InitialImage(await file.readAsBytes(), file.name));
       }
 
-      if (context.mounted) AppLoader.hide(context);
+      if (context.mounted) {
+        await AppLoader.hide(context);
+        loaderShown = false;
+      }
+      if (!context.mounted) return;
 
       navigator.push(
         MaterialPageRoute<void>(
           builder: (_) => ImageToPdfScreen(initialImages: images),
         ),
       );
-    } on Exception {
-      if (context.mounted) AppLoader.hide(context);
-      messenger.showSnackBar(
-        const SnackBar(content: Text('Could not open gallery. Please try again.')),
-      );
+    } catch (_) {
+      if (context.mounted) {
+        messenger.showSnackBar(
+          const SnackBar(content: Text('Could not open gallery. Please try again.')),
+        );
+      }
     } finally {
+      if (loaderShown) await AppLoader.hide(context);
       // Delay reset so a duplicate activity-result callback can't relaunch it.
       Future<void>.delayed(const Duration(milliseconds: 900), () => _picking = false);
     }

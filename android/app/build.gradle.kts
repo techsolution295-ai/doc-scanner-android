@@ -37,6 +37,9 @@ android {
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+        // Release uses the live AdMob app. Debug is overridden below.
+        manifestPlaceholders["admobAppId"] =
+            "ca-app-pub-8476267163759140~4385656429"
     }
 
     signingConfigs {
@@ -51,6 +54,10 @@ android {
     }
 
     buildTypes {
+        debug {
+            manifestPlaceholders["admobAppId"] =
+                "ca-app-pub-3940256099942544~3347511713"
+        }
         release {
             // Play Console upload builds must be signed with the upload keystore.
             signingConfig = if (hasReleaseKeystore) {

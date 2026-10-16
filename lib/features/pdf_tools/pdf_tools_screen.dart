@@ -8,6 +8,7 @@ import 'package:provider/provider.dart';
 import '../../app/constants/app_assets.dart';
 import '../../app/routes/route_names.dart';
 import '../../shared/providers/document_provider.dart';
+import '../../shared/services/ad_service.dart';
 import '../../shared/services/pdf_tools_service.dart';
 import '../../shared/widgets/app_loader.dart';
 import '../image_to_pdf/image_to_pdf_flow.dart';
@@ -104,6 +105,13 @@ class _PdfToolsScreenState extends State<PdfToolsScreen> {
   // ---------------------------------------------------------------------------
 
   Future<void> _handleAction(PdfToolAction action) async {
+    await AdService.instance.showSelectInterstitialThen(() async {
+      if (!mounted) return;
+      await _runAction(action);
+    });
+  }
+
+  Future<void> _runAction(PdfToolAction action) async {
     switch (action) {
       case PdfToolAction.merge:
         await _merge();

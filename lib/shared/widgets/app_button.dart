@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../app/constants/app_colors.dart';
+import 'app_loader.dart';
 
 class AppButton extends StatelessWidget {
   const AppButton({
@@ -27,9 +28,9 @@ class AppButton extends StatelessWidget {
     final spinnerColor = isOutlined ? (color ?? AppColors.primaryBlue) : Colors.white;
     final child = isLoading
         ? SizedBox(
-            height: 22,
-            width: 22,
-            child: CircularProgressIndicator(strokeWidth: 2.4, color: spinnerColor),
+            height: 26,
+            width: 36,
+            child: AppSpinner(size: 26, color: spinnerColor),
           )
         : Row(
             mainAxisSize: MainAxisSize.min,
@@ -40,12 +41,14 @@ class AppButton extends StatelessWidget {
                 const SizedBox(width: 8),
               ],
               Flexible(
-                child: Text(
-                  label,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(fontWeight: FontWeight.w600),
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text(
+                    label,
+                    softWrap: false,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
+                  ),
                 ),
               ),
             ],
@@ -57,7 +60,7 @@ class AppButton extends StatelessWidget {
             style: OutlinedButton.styleFrom(
               foregroundColor: color ?? AppColors.primaryBlue,
               side: BorderSide(color: color ?? AppColors.primaryBlue),
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
             ),
             child: child,
@@ -67,7 +70,7 @@ class AppButton extends StatelessWidget {
             style: ElevatedButton.styleFrom(
               backgroundColor: color ?? AppColors.primaryBlue,
               foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
               elevation: 2,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
             ),

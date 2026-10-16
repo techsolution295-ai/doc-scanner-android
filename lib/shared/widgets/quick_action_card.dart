@@ -69,30 +69,34 @@ class QuickActionCard extends StatelessWidget {
                       : Icon(icon, color: color, size: 28),
                 ),
                 const SizedBox(height: 12),
-                Text(
-                  label,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w700,
-                    fontSize: 14,
-                    color: AppColors.textPrimary,
-                    height: 1.2,
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text(
+                    label,
+                    softWrap: false,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w700,
+                      fontSize: 14,
+                      color: AppColors.textPrimary,
+                      height: 1.2,
+                    ),
                   ),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
                 ),
                 if (subtitle != null) ...[
                   const SizedBox(height: 4),
-                  Text(
-                    subtitle!,
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      fontSize: 11,
-                      color: AppColors.textSecondary,
-                      height: 1.2,
+                  FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text(
+                      subtitle!,
+                      softWrap: false,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        fontSize: 11,
+                        color: AppColors.textSecondary,
+                        height: 1.2,
+                      ),
                     ),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
                   ),
                 ],
               ],

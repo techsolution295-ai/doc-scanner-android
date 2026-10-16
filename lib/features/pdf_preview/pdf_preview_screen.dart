@@ -16,6 +16,7 @@ import '../../shared/services/image_processing_service.dart';
 import '../../shared/services/pdf_service.dart';
 import '../../shared/widgets/app_button.dart';
 import '../../shared/widgets/app_loader.dart';
+import '../../shared/widgets/banner_ad_widget.dart';
 
 class PdfPreviewScreen extends StatefulWidget {
   const PdfPreviewScreen({super.key, required this.session});
@@ -32,6 +33,8 @@ class _PdfPreviewScreenState extends State<PdfPreviewScreen> {
   final _pdfService = PdfService();
   bool _isCreating = false;
   List<Uint8List>? _processedPages;
+  int _previewIndex = 0;
+  String? _error;
 
   @override
   void initState() {
@@ -41,27 +44,59 @@ class _PdfPreviewScreenState extends State<PdfPreviewScreen> {
   }
 
   Future<void> _processPages() async {
-    final pages = <Uint8List>[];
-    for (final page in _session.pages) {
-      final data = page.imageData;
-      pages.add(await _processor.processImage(
-        sourceBytes: data.bytes,
-        filter: data.filter,
-        brightness: data.brightness,
-        contrast: data.contrast,
-        rotation: data.rotation,
-      ));
+    try {
+      final pages = <Uint8List>[];
+      for (final page in _session.pages) {
+        final data = page.imageData;
+        final processed = await _processor.processImage(
+          sourceBytes: data.bytes,
+          filter: data.filter,
+          brightness: data.brightness,
+          contrast: data.contrast,
+          rotation: data.rotation,
+        );
+        if (!identical(processed, data.bytes)) {
+          data
+            ..bytes = processed
+            ..filter = ScanFilterType.original
+            ..brightness = 0
+            ..contrast = 1
+            ..rotation = 0;
+        }
+        pages.add(processed);
+      }
+      if (!mounted) return;
+      setState(() {
+        _processedPages = pages;
+        _error = pages.isEmpty ? 'No pages to preview.' : null;
+        if (_previewIndex >= pages.length) _previewIndex = 0;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _processedPages = _session.pages
+            .map((page) => page.imageData.bytes)
+            .toList();
+        _error = 'Preview used the original pages because processing failed.';
+      });
     }
-    if (mounted) setState(() => _processedPages = pages);
   }
 
   void _reorder(int oldIndex, int newIndex) {
+    final processed = _processedPages;
+    if (processed == null ||
+        oldIndex < 0 ||
+        oldIndex >= processed.length ||
+        newIndex < 0 ||
+        newIndex >= processed.length) {
+      return;
+    }
     setState(() {
-      if (newIndex > oldIndex) newIndex--;
       final page = _session.pages.removeAt(oldIndex);
       _session.pages.insert(newIndex, page);
-      final bytes = _processedPages!.removeAt(oldIndex);
-      _processedPages!.insert(newIndex, bytes);
+      final bytes = processed.removeAt(oldIndex);
+      processed.insert(newIndex, bytes);
+      _previewIndex = newIndex.clamp(0, processed.length - 1);
     });
   }
 
@@ -75,6 +110,12 @@ class _PdfPreviewScreenState extends State<PdfPreviewScreen> {
     setState(() {
       _session.pages.removeAt(index);
       _processedPages?.removeAt(index);
+      final count = _processedPages?.length ?? _session.pages.length;
+      if (count == 0) {
+        _previewIndex = 0;
+      } else if (_previewIndex >= count) {
+        _previewIndex = count - 1;
+      }
     });
   }
 
@@ -93,7 +134,10 @@ class _PdfPreviewScreenState extends State<PdfPreviewScreen> {
         title: const Text('Rename Document'),
         content: TextField(controller: controller, autofocus: true),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
           ElevatedButton(
             onPressed: () => Navigator.pop(context, controller.text.trim()),
             child: const Text('Save'),
@@ -107,7 +151,9 @@ class _PdfPreviewScreenState extends State<PdfPreviewScreen> {
   }
 
   Future<void> _createPdf({bool shareAfter = false}) async {
-    if (_processedPages == null || _processedPages!.isEmpty || _isCreating) return;
+    if (_processedPages == null || _processedPages!.isEmpty || _isCreating) {
+      return;
+    }
 
     setState(() => _isCreating = true);
     AppLoader.show(
@@ -115,38 +161,54 @@ class _PdfPreviewScreenState extends State<PdfPreviewScreen> {
       message: shareAfter ? 'Preparing share…' : 'Saving PDF…',
     );
 
-    final provider = context.read<DocumentProvider>();
-    final doc = await provider.savePdf(
-      session: _session,
-      pageBytes: _processedPages!,
-    );
-
-    if (!mounted) return;
-    AppLoader.hide(context);
-    setState(() => _isCreating = false);
-
-    if (doc == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Failed to create PDF. Please try again.')),
+    try {
+      final provider = context.read<DocumentProvider>();
+      final doc = await provider.savePdf(
+        session: _session,
+        pageBytes: _processedPages!,
       );
-      return;
-    }
 
-    if (shareAfter) {
-      await Share.shareXFiles([XFile(doc.filePath)], text: doc.name);
-    } else {
-      await showDialog<void>(
-        context: context,
-        builder: (_) => SuccessAnimation(
-          message: 'PDF saved successfully!\n${doc.name}',
-          onDone: () => Navigator.of(context).popUntil((r) => r.isFirst),
+      if (!mounted) return;
+      AppLoader.hide(context);
+      setState(() => _isCreating = false);
+
+      if (doc == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Failed to create PDF. Please try again.'),
+          ),
+        );
+        return;
+      }
+
+      if (shareAfter) {
+        await Share.shareXFiles([XFile(doc.filePath)], text: doc.name);
+      } else if (mounted) {
+        await showDialog<void>(
+          context: context,
+          builder: (_) => SuccessAnimation(
+            message: 'PDF saved successfully!\n${doc.name}',
+            onDone: () => Navigator.of(context).popUntil((r) => r.isFirst),
+          ),
+        );
+      }
+    } catch (_) {
+      if (!mounted) return;
+      AppLoader.hide(context);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Failed to create PDF. Please try again.'),
         ),
       );
+    } finally {
+      if (mounted) setState(() => _isCreating = false);
     }
   }
 
   Future<void> _printPdf() async {
-    if (_processedPages == null || _processedPages!.isEmpty || _isCreating) return;
+    if (_processedPages == null || _processedPages!.isEmpty || _isCreating) {
+      return;
+    }
 
     setState(() => _isCreating = true);
     AppLoader.show(context, message: 'Preparing print…');
@@ -177,46 +239,101 @@ class _PdfPreviewScreenState extends State<PdfPreviewScreen> {
       appBar: AppBar(
         title: Text(_session.title),
         actions: [
-          IconButton(icon: const Icon(Icons.edit_rounded), onPressed: _renameDocument),
+          IconButton(
+            icon: const Icon(Icons.edit_rounded),
+            onPressed: _renameDocument,
+          ),
         ],
       ),
-      body: _processedPages == null
+      body: TopBannerBody(
+        child: _processedPages == null
           ? const AppLoadingView(message: 'Preparing preview…')
+          : _processedPages!.isEmpty
+          ? const AppLoadingView(message: 'No pages to preview.')
           : Column(
               children: [
                 _QualityOptions(
                   quality: _session.pdfQuality,
                   compress: _session.compressPdf,
-                  onQualityChanged: (q) => setState(() => _session.pdfQuality = q),
-                  onCompressChanged: (v) => setState(() => _session.compressPdf = v),
+                  onQualityChanged: (q) =>
+                      setState(() => _session.pdfQuality = q),
+                  onCompressChanged: (v) =>
+                      setState(() => _session.compressPdf = v),
+                ),
+                if (_error != null)
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+                    child: Text(
+                      _error!,
+                      style: const TextStyle(color: AppColors.errorRed),
+                    ),
+                  ),
+                Expanded(
+                  flex: 3,
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF0F172A),
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(16),
+                        child: InteractiveViewer(
+                          minScale: 1,
+                          maxScale: 4,
+                          child: Image.memory(
+                            _processedPages![_previewIndex.clamp(
+                              0,
+                              _processedPages!.length - 1,
+                            )],
+                            fit: BoxFit.contain,
+                            gaplessPlayback: true,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
                 ),
                 Expanded(
+                  flex: 2,
                   child: ReorderableListView.builder(
-                    padding: const EdgeInsets.all(16),
-                    itemCount: _session.pages.length,
-                    onReorder: _reorder,
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    itemCount: _session.pages.length < _processedPages!.length
+                        ? _session.pages.length
+                        : _processedPages!.length,
+                    onReorderItem: _reorder,
                     itemBuilder: (context, index) {
+                      final selected = index == _previewIndex;
                       return Card(
                         key: ValueKey(_session.pages[index].id),
-                        margin: const EdgeInsets.only(bottom: 12),
+                        margin: const EdgeInsets.only(bottom: 8),
+                        color: selected ? AppColors.lightBlue : null,
                         child: ListTile(
+                          onTap: () => setState(() => _previewIndex = index),
                           leading: ClipRRect(
                             borderRadius: BorderRadius.circular(8),
                             child: Image.memory(
                               _processedPages![index],
-                              width: 48,
-                              height: 64,
+                              width: 42,
+                              height: 56,
                               fit: BoxFit.cover,
+                              gaplessPlayback: true,
                             ),
                           ),
                           title: Text('Page ${index + 1}'),
-                          subtitle: const Text('Drag to reorder'),
+                          subtitle: const Text(
+                            'Tap to preview • drag to reorder',
+                          ),
                           trailing: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               const Icon(Icons.drag_handle),
                               IconButton(
-                                icon: const Icon(Icons.delete_outline, color: AppColors.errorRed),
+                                icon: const Icon(
+                                  Icons.delete_outline,
+                                  color: AppColors.errorRed,
+                                ),
                                 onPressed: () => _deletePage(index),
                               ),
                             ],
@@ -273,6 +390,7 @@ class _PdfPreviewScreenState extends State<PdfPreviewScreen> {
                 ),
               ],
             ),
+      ),
     );
   }
 }
@@ -312,7 +430,9 @@ class _QualityOptions extends StatelessWidget {
           SwitchListTile(
             contentPadding: EdgeInsets.zero,
             title: const Text('Compress PDF'),
-            subtitle: const Text('Reduces file size by optimizing image quality'),
+            subtitle: const Text(
+              'Reduces file size by optimizing image quality',
+            ),
             value: compress,
             onChanged: onCompressChanged,
           ),

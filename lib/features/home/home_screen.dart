@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -7,6 +8,8 @@ import '../../app/constants/app_assets.dart';
 import '../../app/routes/route_names.dart';
 import '../../shared/models/scan_session.dart';
 import '../../shared/providers/document_provider.dart';
+import '../../shared/providers/settings_provider.dart';
+import '../../shared/services/ad_service.dart';
 import '../../shared/widgets/app_animations.dart';
 import '../files/files_screen.dart';
 import '../files/widgets/files_list_item.dart';
@@ -21,7 +24,17 @@ import 'widgets/feature_grid_card.dart';
 import 'widgets/home_banner.dart';
 import 'widgets/home_header.dart';
 import 'widgets/recent_scan_item.dart';
-import 'widgets/scan_button_card.dart';
+// import 'widgets/scan_button_card.dart';
+
+void _openAfterAd(
+  BuildContext context,
+  FutureOr<void> Function(BuildContext context) action,
+) {
+  AdService.instance.showSelectInterstitialThen(() async {
+    if (!context.mounted) return;
+    await action(context);
+  });
+}
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -41,7 +54,12 @@ class _HomeScreenState extends State<HomeScreen> {
     return 'Good Evening';
   }
 
-  void _openScanner() => ScanFlow.startDocumentScan(context);
+  void _openScanner() {
+    AdService.instance.showSelectInterstitialThen(() async {
+      if (!mounted) return;
+      ScanFlow.startDocumentScan(context);
+    });
+  }
 
   void _setNav(HomeNavItem item) {
     setState(() {
@@ -64,7 +82,8 @@ class _HomeScreenState extends State<HomeScreen> {
               child: _HomeDashboard(
                 greeting: _greeting,
                 onOpenScanner: _openScanner,
-                onOpenPremium: () => Navigator.of(context).pushNamed(RouteNames.premium),
+                onOpenPremium: () =>
+                    Navigator.of(context).pushNamed(RouteNames.premium),
                 onOpenFiles: () => _setNav(HomeNavItem.files),
               ),
             ),
@@ -122,16 +141,15 @@ class _HomeDashboard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          HomeHeader(greeting: greeting),
+          HomeHeader(
+            greeting: greeting,
+            isPremium: context.watch<SettingsProvider>().isPremium,
+            onPro: onOpenPremium,
+          ),
           HomeBanner(onTap: onOpenScanner),
-          ScanButtonCard(onTap: onOpenScanner),
-          _FeatureGrid(
-            onOpenFiles: onOpenFiles,
-            onOpenPremium: onOpenPremium,
-          ),
-          _RecentScansSection(
-            onViewAll: onOpenFiles,
-          ),
+          // ScanButtonCard(onTap: onOpenScanner),
+          _FeatureGrid(onOpenFiles: onOpenFiles, onOpenPremium: onOpenPremium),
+          _RecentScansSection(onViewAll: onOpenFiles),
         ],
       ),
     );
@@ -139,54 +157,56 @@ class _HomeDashboard extends StatelessWidget {
 }
 
 class _FeatureGrid extends StatelessWidget {
-  const _FeatureGrid({
-    required this.onOpenFiles,
-    required this.onOpenPremium,
-  });
+  const _FeatureGrid({required this.onOpenFiles, required this.onOpenPremium});
 
   final VoidCallback onOpenFiles;
   final VoidCallback onOpenPremium;
 
   @override
   Widget build(BuildContext context) {
-    final items = [
+    final isPremium = context.watch<SettingsProvider>().isPremium;
+    final items = <(String, String, String, VoidCallback)>[
       (
         'Document Scan',
         'Scan any document',
         AppAssets.iconDocument,
-        () => ScanFlow.startDocumentScan(context),
+        () => _openAfterAd(context, ScanFlow.startDocumentScan),
       ),
       (
         'ID Card Scan',
         'Scan ID, Passport, etc.',
         AppAssets.iconIdCard,
-        () => Navigator.of(context).pushNamed(RouteNames.cardScanner),
+        () => _openAfterAd(
+          context,
+          (context) =>
+              Navigator.of(context).pushNamed(RouteNames.cardScanner),
+        ),
       ),
       (
         'Image to PDF',
         'Convert images to PDF',
         AppAssets.iconImagePdf,
-        () => ImageToPdfFlow.start(context),
+        () => _openAfterAd(context, ImageToPdfFlow.start),
       ),
       (
         'PDF Tools',
         'Edit, merge, compress',
         AppAssets.iconPdfTools,
-        () => Navigator.of(context).pushNamed(RouteNames.pdfTools),
+        () => _openAfterAd(
+          context,
+          (context) => Navigator.of(context).pushNamed(RouteNames.pdfTools),
+        ),
       ),
-      (
-        'My Files',
-        'View saved documents',
-        AppAssets.iconMyFiles,
-        onOpenFiles,
-      ),
-      (
+      ('My Files', 'View saved documents', AppAssets.iconMyFiles, onOpenFiles),
+    ];
+    if (!isPremium) {
+      items.add((
         'Premium',
         'Unlock all features',
         AppAssets.iconPremium,
         onOpenPremium,
-      ),
-    ];
+      ));
+    }
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(
@@ -202,7 +222,7 @@ class _FeatureGrid extends StatelessWidget {
           crossAxisCount: 3,
           mainAxisSpacing: 8,
           crossAxisSpacing: 6,
-          childAspectRatio: 1.02,
+          childAspectRatio: 0.92,
         ),
         itemCount: items.length,
         itemBuilder: (_, i) {
@@ -227,9 +247,9 @@ class _RecentScansSection extends StatelessWidget {
 
   void _openDoc(BuildContext context, ScannedDocument doc) {
     if (!File(doc.filePath).existsSync()) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('File no longer exists.')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('File no longer exists.')));
       return;
     }
     Navigator.of(context).pushNamed(
@@ -276,7 +296,13 @@ class _RecentScansSection extends StatelessWidget {
                       child: const Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Text('View All', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+                          Text(
+                            'View All',
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
                           Icon(Icons.chevron_right, size: 18),
                         ],
                       ),
@@ -290,9 +316,13 @@ class _RecentScansSection extends StatelessWidget {
                 Container(
                   decoration: BoxDecoration(
                     color: Colors.white,
-                    borderRadius: BorderRadius.circular(HomeConstants.cardRadius),
+                    borderRadius: BorderRadius.circular(
+                      HomeConstants.cardRadius,
+                    ),
                     border: Border.all(color: const Color(0xFFEEF2F7)),
-                    boxShadow: [HomeConstants.softShadow(blur: 14, y: 5, opacity: 0.05)],
+                    boxShadow: [
+                      HomeConstants.softShadow(blur: 14, y: 5, opacity: 0.05),
+                    ],
                   ),
                   child: Column(
                     children: [
@@ -303,7 +333,8 @@ class _RecentScansSection extends StatelessWidget {
                           showDivider: i < recent.length - 1,
                           animationIndex: i,
                           onTap: () => _openDoc(context, recent[i]),
-                          onFavoriteTap: () => provider.toggleFavorite(recent[i].id),
+                          onFavoriteTap: () =>
+                              provider.toggleFavorite(recent[i].id),
                           onMoreTap: () => _openDoc(context, recent[i]),
                         ),
                     ],
@@ -346,8 +377,11 @@ class _RecentEmptyState extends StatelessWidget {
               color: HomeConstants.linkBlue.withValues(alpha: 0.1),
               shape: BoxShape.circle,
             ),
-            child: const Icon(Icons.document_scanner_outlined,
-                color: HomeConstants.linkBlue, size: 26),
+            child: const Icon(
+              Icons.document_scanner_outlined,
+              color: HomeConstants.linkBlue,
+              size: 26,
+            ),
           ),
           const SizedBox(height: 12),
           const Text(

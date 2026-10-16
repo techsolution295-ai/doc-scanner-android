@@ -49,7 +49,11 @@ class AppRoutes {
         final args = settings.arguments as PdfViewerArgs;
         return _slideRoute(PdfViewerScreen(args: args), settings);
       case RouteNames.premium:
-        return _slideRoute(const PremiumScreen(), settings);
+        final fromSplash = settings.arguments == true;
+        return _slideRoute(
+          PremiumScreen(openedFromSplash: fromSplash),
+          settings,
+        );
       case RouteNames.settings:
         return _slideRoute(const SettingsScreen(), settings);
       default:

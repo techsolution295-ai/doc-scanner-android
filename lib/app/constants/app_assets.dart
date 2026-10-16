@@ -2,7 +2,9 @@
 class AppAssets {
   AppAssets._();
 
+  static const String appIcon = 'assets/images/app_icon.png';
   static const String homeBanner = 'assets/images/home_banner.png';
+  static const String proCrown = 'assets/images/pro_crown.png';
   static const String pdfToolsBanner = 'assets/images/pdf_tools_banner.png';
   static const String toolsBanner = 'assets/images/tools_banner.png';
 

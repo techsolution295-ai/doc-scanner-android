@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 
 import '../../app/constants/app_colors.dart';
+import '../widgets/app_loader.dart';
 
 class SuccessAnimation extends StatelessWidget {
   const SuccessAnimation({
@@ -84,7 +85,7 @@ class LoadingOverlay extends StatelessWidget {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const CircularProgressIndicator(),
+                const AppSpinner(size: 36),
                 const SizedBox(height: 20),
                 Text(
                   message,

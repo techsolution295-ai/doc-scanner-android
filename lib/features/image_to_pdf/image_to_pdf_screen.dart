@@ -17,6 +17,7 @@ import '../../shared/providers/document_provider.dart';
 import '../../shared/services/pdf_service.dart';
 import '../../shared/widgets/app_button.dart';
 import '../../shared/widgets/app_loader.dart';
+import '../../shared/widgets/banner_ad_widget.dart';
 import '../../shared/widgets/empty_state_widget.dart';
 import '../pdf_viewer/pdf_viewer_screen.dart';
 
@@ -72,24 +73,30 @@ class _ImageToPdfScreenState extends State<ImageToPdfScreen> {
   Future<void> _pickImages() async {
     if (_isPicking || _busy) return;
     _isPicking = true;
+    var loaderShown = false;
     try {
       final picked = await _picker.pickMultiImage(imageQuality: 90);
-      if (picked.isEmpty) return;
+      if (picked.isEmpty || !mounted) return;
 
-      if (!mounted) return;
       AppLoader.show(context, message: 'Loading images…');
+      loaderShown = true;
       for (final file in picked) {
         final bytes = await file.readAsBytes();
         _images.add(_PickedImage(id: _uuid.v4(), bytes: bytes, name: file.name));
       }
       if (mounted) {
-        AppLoader.hide(context);
+        await AppLoader.hide(context);
+        loaderShown = false;
         setState(() {});
       }
-    } on Exception {
-      if (mounted) AppLoader.hide(context);
-      // Ignore duplicate/cancelled picker activations.
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Could not load those images.')),
+        );
+      }
     } finally {
+      if (loaderShown && mounted) await AppLoader.hide(context);
       _isPicking = false;
     }
   }
@@ -100,7 +107,6 @@ class _ImageToPdfScreenState extends State<ImageToPdfScreen> {
 
   void _reorder(int oldIndex, int newIndex) {
     setState(() {
-      if (newIndex > oldIndex) newIndex--;
       final item = _images.removeAt(oldIndex);
       _images.insert(newIndex, item);
     });
@@ -125,7 +131,8 @@ class _ImageToPdfScreenState extends State<ImageToPdfScreen> {
       final provider = context.read<DocumentProvider>();
       final doc = await provider.savePdf(session: session, pageBytes: _pageBytes);
       if (!mounted) return;
-      AppLoader.hide(context);
+      await AppLoader.hide(context);
+      if (!mounted) return;
       if (doc == null) {
         _snack('Could not save the PDF.');
         return;
@@ -135,7 +142,7 @@ class _ImageToPdfScreenState extends State<ImageToPdfScreen> {
         arguments: PdfViewerArgs(filePath: doc.filePath, title: doc.name),
       );
     } catch (_) {
-      if (mounted) AppLoader.hide(context);
+      if (mounted) await AppLoader.hide(context);
       _snack('Something went wrong. Please try again.');
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -157,10 +164,11 @@ class _ImageToPdfScreenState extends State<ImageToPdfScreen> {
       final path = '${dir.path}/$_docName.pdf';
       await File(path).writeAsBytes(bytes);
       if (!mounted) return;
-      AppLoader.hide(context);
+      await AppLoader.hide(context);
+      if (!mounted) return;
       await Share.shareXFiles([XFile(path)], text: _docName);
     } catch (_) {
-      if (mounted) AppLoader.hide(context);
+      if (mounted) await AppLoader.hide(context);
       _snack('Could not share the PDF.');
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -179,10 +187,11 @@ class _ImageToPdfScreenState extends State<ImageToPdfScreen> {
         title: _docName,
       );
       if (!mounted) return;
-      AppLoader.hide(context);
+      await AppLoader.hide(context);
+      if (!mounted) return;
       await Printing.layoutPdf(onLayout: (_) async => bytes);
     } catch (_) {
-      if (mounted) AppLoader.hide(context);
+      if (mounted) await AppLoader.hide(context);
       _snack('Could not print. Please try again.');
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -209,7 +218,8 @@ class _ImageToPdfScreenState extends State<ImageToPdfScreen> {
             ),
         ],
       ),
-      body: !hasImages
+      body: TopBannerBody(
+        child: !hasImages
           ? EmptyStateWidget(
               icon: Icons.photo_library_rounded,
               title: 'Import images',
@@ -255,7 +265,7 @@ class _ImageToPdfScreenState extends State<ImageToPdfScreen> {
                   child: ReorderableListView.builder(
                     padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
                     itemCount: _images.length,
-                    onReorder: _reorder,
+                    onReorderItem: _reorder,
                     itemBuilder: (context, index) {
                       final img = _images[index];
                       return Container(
@@ -354,6 +364,7 @@ class _ImageToPdfScreenState extends State<ImageToPdfScreen> {
                 ),
               ],
             ),
+      ),
     );
   }
 }

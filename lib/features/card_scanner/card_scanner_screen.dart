@@ -12,6 +12,7 @@ import '../../shared/services/document_scanner_service.dart';
 import '../../shared/services/image_processing_service.dart';
 import '../../shared/widgets/app_button.dart';
 import '../../shared/widgets/app_loader.dart';
+import '../../shared/widgets/banner_ad_widget.dart';
 
 class CardScannerScreen extends StatefulWidget {
   const CardScannerScreen({super.key});
@@ -116,7 +117,8 @@ class _CardScannerScreenState extends State<CardScannerScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Card Scanner')),
-      body: SingleChildScrollView(
+      body: TopBannerBody(
+        child: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -187,6 +189,7 @@ class _CardScannerScreenState extends State<CardScannerScreen> {
             ],
           ],
         ),
+      ),
       ),
     );
   }
